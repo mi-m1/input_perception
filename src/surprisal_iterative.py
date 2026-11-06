@@ -90,11 +90,19 @@ def surprisal_t5(tokenizer, model, sentence):
 
     # print(f"surprisal: {surprisal_per_token}")
 
-def cws(tokenizer, model, sentence, gamma=0.5):
+def cws(tokenizer, model, sentence, gamma=0.5 * np.log(2)):
 
     """
     gamma: controls the influence of the KL Divergence - CWS=Surprisal+γ⋅KL Divergence
-    TODO: think about implementing threshold?
+    Both surprisal and KL divergence are measured in bits
+    (using base-2 logarithms).
+
+    Note: 
+        The original experiments used gamma=0.5 with surprisal
+        measured in bits and KL divergence measured in nats.
+        Converting KL divergence to bits and setting
+        gamma=0.5 * ln(2) preserves the intergrity, mathematically.
+
     """
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -166,8 +174,9 @@ def cws(tokenizer, model, sentence, gamma=0.5):
 
         # print(f"check sum ==1: {sum(q_dist)}")
 
-        # # Calculate KL divergence: D_KL(P || Q)
-        kl_divergence = torch.sum(token_probs * (torch.log(token_probs) - torch.log(q_dist))).item()
+        # # Calculate KL divergence: D_KL(P || Q) in bits
+        # (division by ln(2) converts nats to bits)
+        kl_divergence = torch.sum(token_probs * (torch.log(token_probs) - torch.log(q_dist))).item() / np.log(2)
         # print(f"kl_divergence: {kl_divergence}")
 
         kl_term = gamma * kl_divergence
