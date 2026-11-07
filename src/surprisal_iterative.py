@@ -30,17 +30,17 @@ def surprisal(tokenizer, model, sentence,):
     # model = model.to(device)
     model.eval()
 
-    tokens = tokenizer.tokenize(sentence, return_tensors="pt")
+    # Control special tokens explicitly and label only scored positions.
+    ids = tokenizer.encode(sentence, add_special_tokens=False)
+    if tokenizer.bos_token_id is not None:
+        ids = [tokenizer.bos_token_id] + ids
 
-    # Dynamically check if the BOS token exists and build input_ids accordingly
-    if tokenizer.bos_token is not None:
-        input_ids = torch.tensor(
-            tokenizer.encode(tokenizer.bos_token) + tokenizer.encode(sentence)
-        ).unsqueeze(0).to(device)
-    else:
-        input_ids = torch.tensor(
-            tokenizer.encode(sentence)
-        ).unsqueeze(0).to(device)
+    # Without BOS, the first sentence token has no preceding context.
+    if len(ids) < 2:
+        return []
+
+    input_ids = torch.tensor([ids], dtype=torch.long, device=device)
+    tokens = tokenizer.convert_ids_to_tokens(ids[1:])
 
     with torch.no_grad():
       logits = model(input_ids)[0].to(torch.float64) #logits
@@ -49,13 +49,13 @@ def surprisal(tokenizer, model, sentence,):
     # print(f"logits.shape: {logits.shape}") #torch.Size([1, 8, 50257])
 
     scores = []
-    for index in range(input_ids.shape[1]):
+    for index in range(1, input_ids.shape[1]):
 
         # print(f"index:{index}")
         # scores.append(str(-1 * math.log2(torch.nn.Softmax(0)(logits[0][index-1])[input_ids[0][index]].item())))
         scores.append(str(-1 * np.log2(torch.nn.Softmax(dim=0)(logits[0][index-1])[input_ids[0][index]].item())))
 
-    surprisal_per_token = list(zip(tokens,scores[1:len(scores)]))
+    surprisal_per_token = list(zip(tokens,scores))
 
     return surprisal_per_token
 
@@ -109,18 +109,17 @@ def cws(tokenizer, model, sentence, gamma=0.5 * np.log(2)):
     # model = model.to(device)
     model.eval()
 
-    tokens = tokenizer.tokenize(sentence, return_tensors="pt")
-    # print(tokens)
+    # Control special tokens explicitly and label only scored positions.
+    ids = tokenizer.encode(sentence, add_special_tokens=False)
+    if tokenizer.bos_token_id is not None:
+        ids = [tokenizer.bos_token_id] + ids
 
-    # Dynamically check if the BOS token exists and build input_ids accordingly
-    if tokenizer.bos_token is not None:
-        input_ids = torch.tensor(
-            tokenizer.encode(tokenizer.bos_token) + tokenizer.encode(sentence)
-        ).unsqueeze(0).to(device)
-    else:
-        input_ids = torch.tensor(
-            tokenizer.encode(sentence)
-        ).unsqueeze(0).to(device)
+    # Without BOS, the first sentence token has no preceding context.
+    if len(ids) < 2:
+        return [], []
+
+    input_ids = torch.tensor([ids], dtype=torch.long, device=device)
+    tokens = tokenizer.convert_ids_to_tokens(ids[1:])
 
     # input_ids = torch.tensor(tokenizer.encode(tokenizer.bos_token) + tokenizer.encode(sentence)).unsqueeze(0).to(device)
 
@@ -138,7 +137,7 @@ def cws(tokenizer, model, sentence, gamma=0.5 * np.log(2)):
     surprisal_scores = []
     cws_scores = []
 
-    for index in range(input_ids.shape[1]):
+    for index in range(1, input_ids.shape[1]):
         token_id = input_ids[0, index].item()
         # print(f'token_id: {token_id}')
 
@@ -184,8 +183,8 @@ def cws(tokenizer, model, sentence, gamma=0.5 * np.log(2)):
 
         cws_scores.append(cws)
         
-    surprisal_per_token = list(zip(tokens,surprisal_scores[1:len(surprisal_scores)]))
-    cws_per_token = list(zip(tokens, cws_scores[1:len(cws_scores)]))
+    surprisal_per_token = list(zip(tokens,surprisal_scores))
+    cws_per_token = list(zip(tokens, cws_scores))
 
     return surprisal_per_token, cws_per_token
 
