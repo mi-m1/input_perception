@@ -417,7 +417,7 @@ class Features_Calculator:
             f"{self.func_name}_position_sentenceMax": position_sentenceMax,
             f"{self.func_name}_position_sentenceMin": position_sentenceMin,
             f"{self.func_name}_positional_sentenceMax_in_expression": positional_sentenceMax_in_expression, 
-            f"{self.func_name}_positional_sentenceMin_in_expression": positional_sentenceMax_in_expression,
+            f"{self.func_name}_positional_sentenceMin_in_expression": positional_sentenceMin_in_expression,
         }
 
         return dict_to_return
